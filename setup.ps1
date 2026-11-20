@@ -1,8 +1,12 @@
 # Second brain setup for Claude Code and Codex (Windows PowerShell 5.1+ or PowerShell 7).
-# Usage: powershell -ExecutionPolicy Bypass -File .\setup.ps1 [-BrainDir <folder>]
+# Usage: powershell -ExecutionPolicy Bypass -File .\setup.ps1 [-BrainDir <folder>] [-WithHook]
 # Default folder: <home>\secondbrain  (kept out of Documents so OneDrive does not sync it)
+#   -WithHook   also install the optional Claude Code nudge hook (needs Python 3)
 # Safe to run twice: existing files are never overwritten.
-param([string]$BrainDir = (Join-Path $HOME 'secondbrain'))
+param(
+    [string]$BrainDir = (Join-Path $HOME 'secondbrain'),
+    [switch]$WithHook
+)
 $ErrorActionPreference = 'Stop'
 
 $ClaudeDir = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $HOME '.claude' }
@@ -63,7 +67,22 @@ if (Test-Path -LiteralPath $CodexDir -PathType Container) {
     Write-Host "codex    $Agents"
 }
 
-# 3. Let any session read and write the brain without permission prompts.
+# 3. Let any session read and write the brain without permission prompts,
+#    and register the optional nudge hook when asked.
+$HookCmd = ''
+if ($WithHook) {
+    $Python = @('python3', 'python', 'py') | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
+    if (-not $Python) {
+        Write-Warning 'Python 3 not found, so the nudge hook was skipped. Install Python and run this again with -WithHook.'
+    } else {
+        $HooksDir = Join-Path $ClaudeDir 'hooks'
+        New-Item -ItemType Directory -Force -Path $HooksDir | Out-Null
+        $HookFile = Join-Path $HooksDir 'brain-nudge.py'
+        Copy-Item -LiteralPath (Join-Path $Here 'extras/brain-nudge.py') -Destination $HookFile -Force
+        # Forward slashes: valid on Windows and safe in both bash and PowerShell hook shells.
+        $HookCmd = "$Python `"$($HookFile -replace '\\', '/')`" `"$($BrainDir -replace '\\', '/')`""
+    }
+}
 $Settings = Join-Path $ClaudeDir 'settings.json'
 try {
     $obj = [pscustomobject]@{}
@@ -78,17 +97,50 @@ try {
     if (-not $perm.PSObject.Properties['additionalDirectories']) {
         $perm | Add-Member -NotePropertyName additionalDirectories -NotePropertyValue @()
     }
+    $changed = $false
     $dirs = @($perm.additionalDirectories)
     if ($dirs -notcontains $BrainDir) {
         $perm.additionalDirectories = @($dirs + $BrainDir)
+        $changed = $true
+    }
+    if ($HookCmd) {
+        if (-not $obj.PSObject.Properties['hooks']) {
+            $obj | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{})
+        }
+        $hooks = $obj.hooks
+        if (-not $hooks.PSObject.Properties['Stop']) {
+            $hooks | Add-Member -NotePropertyName Stop -NotePropertyValue @()
+        }
+        $stops = @($hooks.Stop)
+        $installed = $false
+        foreach ($group in $stops) {
+            foreach ($h in @($group.hooks)) {
+                if ("$($h.command)" -like '*brain-nudge.py*') {
+                    if (-not $installed -and $h.command -cne $HookCmd) {
+                        $h.command = $HookCmd   # already installed: repoint it at this brain
+                        $changed = $true
+                    }
+                    $installed = $true
+                }
+            }
+        }
+        if (-not $installed) {
+            $entry = [pscustomobject]@{ hooks = @([pscustomobject]@{ type = 'command'; command = $HookCmd; timeout = 10 }) }
+            $hooks.Stop = @($stops + $entry)
+            $changed = $true
+        }
+    }
+    if ($changed) {
         $tmp = "$Settings.tmp"
         [IO.File]::WriteAllText($tmp, ($obj | ConvertTo-Json -Depth 100) + "`n", $Utf8)
         Move-Item -LiteralPath $tmp -Destination $Settings -Force
     }
     Write-Host "allowed  $Settings"
+    if ($HookCmd) { Write-Host "hook     $HookFile" }
 } catch {
     Write-Warning "Could not update $Settings automatically: $($_.Exception.Message)"
     Write-Warning "Add `"$BrainDir`" to permissions.additionalDirectories in that file by hand."
+    if ($HookCmd) { Write-Warning 'The nudge hook was not registered. See the README to add it by hand.' }
 }
 
 Write-Host ""

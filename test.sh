@@ -66,6 +66,40 @@ printf '{"session_id":"t2","stop_hook_active":false}' | BRAIN_NUDGE_EVERY=1 pyth
 echo 'not json' | python3 "$HERE/extras/brain-nudge.py" || fail "hook exits non-zero on bad input"
 echo "PASS brain-nudge.py"
 
+# Hook flag: registers the hook once, keeps other hooks, repoints a stale entry, and the command runs.
+SEED='{"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "true"}]}], "Stop": [{"hooks": [{"type": "command", "command": "python3 /old/brain-nudge.py"}]}]}}'
+check_hook_flag() {  # $1 = label, $2 = expected brain folder
+  local cmd
+  cmd="$(python3 - "$HOME/.claude/settings.json" <<'PY'
+import json, sys
+s = json.load(open(sys.argv[1]))
+cmds = [h["command"] for g in s["hooks"]["Stop"] for h in g["hooks"] if "brain-nudge.py" in h["command"]]
+assert len(cmds) == 1, cmds
+assert "/old/" not in cmds[0], cmds
+assert s["hooks"]["PreToolUse"][0]["hooks"][0]["command"] == "true", s["hooks"]
+print(cmds[0])
+PY
+)" || fail "$1: hook not registered exactly once, stale entry kept, or other hooks lost"
+  [ -f "$HOME/.claude/hooks/brain-nudge.py" ] || fail "$1: hook file not copied"
+  printf '{"session_id":"flag","stop_hook_active":false}' | BRAIN_NUDGE_EVERY=1 sh -c "$cmd" | grep -q "$2/index.md" \
+    || fail "$1: installed hook command does not run or points at the wrong brain"
+}
+
+rm -rf "$HOME/.claude"; mkdir -p "$HOME/.claude"; echo "$SEED" > "$HOME/.claude/settings.json"
+"$HERE/setup.sh" --with-hook > /dev/null
+"$HERE/setup.sh" --with-hook > /dev/null
+check_hook_flag "setup.sh --with-hook" "Documents/secondbrain"
+"$HERE/setup.sh" --bogus > /dev/null 2>&1 && fail "unknown option was accepted"
+echo "PASS setup.sh --with-hook"
+
+if command -v pwsh > /dev/null; then
+  rm -rf "$HOME/.claude"; mkdir -p "$HOME/.claude"; echo "$SEED" > "$HOME/.claude/settings.json"
+  pwsh -NoProfile -File "$HERE/setup.ps1" -WithHook > /dev/null
+  pwsh -NoProfile -File "$HERE/setup.ps1" -WithHook > /dev/null
+  check_hook_flag "setup.ps1 -WithHook" "/secondbrain"
+  echo "PASS setup.ps1 -WithHook"
+fi
+
 # Same checks for the Windows script, when PowerShell is installed.
 command -v pwsh > /dev/null || { echo "SKIP setup.ps1 (pwsh not installed)"; exit 0; }
 

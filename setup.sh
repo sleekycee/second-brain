@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 # Second brain setup for Claude Code and Codex (macOS / Linux).
-# Usage: ./setup.sh [brain-folder]     default: ~/Documents/secondbrain
+# Usage: ./setup.sh [--with-hook] [brain-folder]     default: ~/Documents/secondbrain
+#   --with-hook   also install the optional Claude Code nudge hook (needs python3)
 # Safe to run twice: existing files are never overwritten.
 set -euo pipefail
 
-BRAIN_DIR="${1:-$HOME/Documents/secondbrain}"
+WITH_HOOK=0
+BRAIN_ARG=""
+for arg in "$@"; do
+  case "$arg" in
+    --with-hook) WITH_HOOK=1 ;;
+    -*) echo "Unknown option: $arg" >&2; exit 1 ;;
+    *) BRAIN_ARG="$arg" ;;
+  esac
+done
+BRAIN_DIR="${BRAIN_ARG:-$HOME/Documents/secondbrain}"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
@@ -51,20 +61,39 @@ if [ -d "$CODEX_DIR" ]; then
   echo "codex    $AGENTS"
 fi
 
-# 3. Let any session read and write the brain without permission prompts.
+# 3. Let any session read and write the brain without permission prompts,
+#    and register the optional nudge hook when asked.
+HOOK_CMD=""
+if [ "$WITH_HOOK" = 1 ]; then
+  mkdir -p "$CLAUDE_DIR/hooks"
+  cp "$HERE/extras/brain-nudge.py" "$CLAUDE_DIR/hooks/brain-nudge.py"
+  HOOK_CMD="python3 \"$CLAUDE_DIR/hooks/brain-nudge.py\" \"$BRAIN_DIR\""
+fi
 SETTINGS="$CLAUDE_DIR/settings.json"
-if python3 - "$SETTINGS" "$BRAIN_DIR" <<'PY'
+if python3 - "$SETTINGS" "$BRAIN_DIR" "$HOOK_CMD" <<'PY'
 import json, os, shutil, sys
 
-path, brain = sys.argv[1], sys.argv[2]
+path, brain, hook_cmd = sys.argv[1], sys.argv[2], sys.argv[3]
 settings = {}
 if os.path.exists(path) and os.path.getsize(path):
     with open(path) as fh:
         settings = json.load(fh)  # invalid JSON raises here, file left untouched
     shutil.copy(path, path + ".bak")
+changed = False
 dirs = settings.setdefault("permissions", {}).setdefault("additionalDirectories", [])
 if brain not in dirs:
     dirs.append(brain)
+    changed = True
+if hook_cmd:
+    stops = settings.setdefault("hooks", {}).setdefault("Stop", [])
+    found = [h for g in stops for h in g.get("hooks", []) if "brain-nudge.py" in h.get("command", "")]
+    if not found:
+        stops.append({"hooks": [{"type": "command", "command": hook_cmd, "timeout": 10}]})
+        changed = True
+    elif found[0].get("command") != hook_cmd:  # already installed: repoint it at this brain
+        found[0]["command"] = hook_cmd
+        changed = True
+if changed:
     tmp = path + ".tmp"
     with open(tmp, "w") as fh:
         json.dump(settings, fh, indent=2)
@@ -73,9 +102,11 @@ if brain not in dirs:
 PY
 then
   echo "allowed  $SETTINGS"
+  [ "$WITH_HOOK" = 1 ] && echo "hook     $CLAUDE_DIR/hooks/brain-nudge.py"
 else
   echo "Could not update $SETTINGS automatically." >&2
   echo "Add \"$BRAIN_DIR\" to permissions.additionalDirectories in that file by hand." >&2
+  [ "$WITH_HOOK" = 1 ] && echo "The nudge hook was not registered. See the README to add it by hand." >&2
 fi
 
 cat <<EOF

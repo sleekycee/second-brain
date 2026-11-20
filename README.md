@@ -146,7 +146,19 @@ Partly. Be clear on what is automatic and what is not.
 
 `extras/brain-nudge.py` makes saving more reliable. Every 6th time Claude finishes a turn in a session, it is asked: anything durable settled since the last check? It then saves to the brain and tells you in one line, or replies "Brain: nothing new."
 
-It is not installed by the setup scripts. To add it, copy the file somewhere permanent and register it under `hooks` in `~/.claude/settings.json`, keeping any hooks already there:
+It is off by default. Turn it on with a flag when you run the setup script, first time or any later time:
+
+```bash
+./second-brain/setup.sh --with-hook
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\second-brain\setup.ps1 -WithHook
+```
+
+The flag copies the script to `~/.claude/hooks/brain-nudge.py` and registers it as a `Stop` hook, keeping any hooks you already have. Running it again does not add a second copy; it repoints the existing one at the brain folder you pass.
+
+To add it by hand instead, copy the file somewhere permanent and register it under `hooks` in `~/.claude/settings.json`, keeping any hooks already there:
 
 ```json
 "Stop": [
@@ -170,7 +182,7 @@ Install extras/brain-nudge.py from the second-brain repo as a Stop hook in my ~/
 
 What to expect:
 
-- Needs Python 3. On Windows the command is usually `python` or `py`, not `python3`.
+- Needs Python 3. On Windows the command is usually `python` or `py`, not `python3`; the flag picks whichever it finds and skips the hook with a warning if there is none.
 - Costs one extra short reply every 6 turns. Change the number with the `BRAIN_NUDGE_EVERY` environment variable or the `EVERY` line in the script.
 - A session shorter than 6 turns is never nudged. Say "update my brain" before closing those.
 - It only applies to sessions started after you add it. To remove it, delete the `Stop` block.
