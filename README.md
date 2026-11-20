@@ -25,27 +25,41 @@ No plugin, no hook, no server. Plain files you own.
 
 ## Set it up
 
-### Option A - run the script (macOS / Linux)
+### Option A - run the script
+
+Clone the repo first (any OS):
 
 ```bash
 git clone https://github.com/sleekycee/second-brain.git
 ```
 
+**macOS / Linux** - brain goes to `~/Documents/secondbrain`:
+
 ```bash
 ./second-brain/setup.sh
 ```
 
-To put the brain somewhere else, pass a folder with no spaces in its path:
+**Windows** (PowerShell) - brain goes to `%USERPROFILE%\secondbrain`, outside Documents so OneDrive does not sync it:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\second-brain\setup.ps1
+```
+
+To put the brain somewhere else, pass a folder:
 
 ```bash
 ./second-brain/setup.sh ~/brain
 ```
 
-The script never overwrites an existing file, backs up `settings.json` to `settings.json.bak`, and is safe to run twice.
+```powershell
+powershell -ExecutionPolicy Bypass -File .\second-brain\setup.ps1 -BrainDir D:\brain
+```
+
+Both scripts never overwrite an existing file, back up `settings.json` to `settings.json.bak`, and are safe to run twice. A folder under your home folder is written as `~/...`, so a space in your username is fine; a space anywhere else in the path is refused.
 
 ### Option B - give your agent this prompt
 
-Works in Claude Code on any OS, including Windows. Paste it as is:
+Works in Claude Code on any OS. On Windows, replace `~/Documents/secondbrain` with `~/secondbrain`. Paste it as is:
 
 ```text
 Set up a second brain for me, following https://github.com/sleekycee/second-brain.
@@ -112,4 +126,8 @@ Shortcuts:
 ./test.sh
 ```
 
-Runs the setup twice against a throwaway home folder and checks nothing is overwritten or duplicated.
+Runs each setup script twice against a throwaway home folder and checks nothing is overwritten or duplicated. The PowerShell script is checked too when `pwsh` is installed.
+
+## License
+
+MIT - see [LICENSE](LICENSE).

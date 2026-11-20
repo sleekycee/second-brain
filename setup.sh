@@ -8,10 +8,6 @@ BRAIN_DIR="${1:-$HOME/Documents/secondbrain}"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-case "$BRAIN_DIR" in
-  *" "*) echo "Pick a brain folder with no spaces in its path: $BRAIN_DIR" >&2; exit 1 ;;
-esac
-
 mkdir -p "$BRAIN_DIR" "$CLAUDE_DIR"
 BRAIN_DIR="$(cd "$BRAIN_DIR" && pwd)"
 
@@ -19,6 +15,9 @@ BRAIN_DIR="$(cd "$BRAIN_DIR" && pwd)"
 case "$BRAIN_DIR" in
   "$HOME"/*) SHOWN="~${BRAIN_DIR#"$HOME"}" ;;
   *) SHOWN="$BRAIN_DIR" ;;
+esac
+case "$SHOWN" in
+  *[[:space:]]*) echo "Pick a brain folder with no spaces in its path: $SHOWN" >&2; exit 1 ;;
 esac
 ESCAPED="$(printf '%s' "$SHOWN" | sed 's/[&|\\]/\\&/g')"
 
