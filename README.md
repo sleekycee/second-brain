@@ -1,11 +1,11 @@
-# Second Brain for Claude Code
+# Second Brain for AI Agents
 
-A folder of plain markdown files about you and your work that loads behind every Claude Code session, whatever project folder you open. You stop re-briefing the agent, and your projects stay in their own folders.
+A folder of plain markdown files about you and your work that loads behind every agent session, whatever project folder you open. Works with Claude Code, Codex, and any agent that can read files. You stop re-briefing the agent, and your projects stay in their own folders.
 
 ## How it works
 
 ```
-~/Documents/secondbrain/        the brain: knowledge about you, not your code
+secondbrain/                    the brain: knowledge about you, not your code
   CLAUDE.md                     who you are + rules, loaded in every session
   index.md                      map of every file, loaded in every session
   what-ive-built.md             dated log of what you ship
@@ -15,11 +15,15 @@ A folder of plain markdown files about you and your work that loads behind every
   sources/                      files you drop in (CV, decks); read, never edited
 ```
 
-Three things make it work from any folder:
+The brain is one folder. Each agent is told where it is through that agent's own global instructions file:
 
-1. Two import lines in `~/.claude/CLAUDE.md` load the brain's `CLAUDE.md` and `index.md` at the start of every session. About 70 lines of context.
-2. The brain folder is added to `permissions.additionalDirectories` in `~/.claude/settings.json`, so any session can read and write it without a prompt.
-3. The brain's `CLAUDE.md` uses full paths and tells the agent to open deeper files only when a task needs them, and to save durable facts back.
+| Agent | How the brain loads | Set up by the script |
+|-------|---------------------|----------------------|
+| Claude Code | Two `@import` lines in `~/.claude/CLAUDE.md` pull in the brain's `CLAUDE.md` and `index.md`. The folder is added to `permissions.additionalDirectories` in `~/.claude/settings.json`. | Yes |
+| Codex | `AGENTS.md` has no import syntax, so a short pointer in `~/.codex/AGENTS.md` tells Codex to read the brain's two files at the start of each session. | Yes, when `~/.codex` exists |
+| Any other agent | Paste the one-line pointer below into that agent's global or custom instructions. | No - one manual paste |
+
+The brain's own `CLAUDE.md` uses full paths, tells the agent to open deeper files only when a task needs them, and tells it to save durable facts back. Despite the filename, it is plain markdown any agent can follow.
 
 No plugin, no hook, no server. Plain files you own.
 
@@ -57,9 +61,11 @@ powershell -ExecutionPolicy Bypass -File .\second-brain\setup.ps1 -BrainDir D:\b
 
 Both scripts never overwrite an existing file, back up `settings.json` to `settings.json.bak`, and are safe to run twice. A folder under your home folder is written as `~/...`, so a space in your username is fine; a space anywhere else in the path is refused.
 
+Installed Codex after running the script? Run it again; it adds the Codex pointer and changes nothing else.
+
 ### Option B - give your agent this prompt
 
-Works in Claude Code on any OS. On Windows, replace `~/Documents/secondbrain` with `~/secondbrain`. Paste it as is:
+Works in any agent that can edit files, on any OS. On Windows, replace `~/Documents/secondbrain` with `~/secondbrain`. Paste it as is:
 
 ```text
 Set up a second brain for me, following https://github.com/sleekycee/second-brain.
@@ -69,25 +75,52 @@ Set up a second brain for me, following https://github.com/sleekycee/second-brai
    and sources/. Copy the file contents from the repo's template/ folder and
    replace every __BRAIN__ with the folder's path. Do not overwrite any file
    that already exists.
-2. Add these two lines to my global ~/.claude/CLAUDE.md, keeping everything
-   already in it:
-   @~/Documents/secondbrain/CLAUDE.md
-   @~/Documents/secondbrain/index.md
-3. Add the folder's full path to permissions.additionalDirectories in
-   ~/.claude/settings.json. Keep every other setting. Back the file up first.
-4. Show me what you changed, then run the setup interview in
+2. Make it load in every session of the agent I am using right now:
+   - Claude Code: add these two lines to ~/.claude/CLAUDE.md, keeping
+     everything already in it:
+       @~/Documents/secondbrain/CLAUDE.md
+       @~/Documents/secondbrain/index.md
+     Then add the folder's full path to permissions.additionalDirectories in
+     ~/.claude/settings.json. Keep every other setting. Back the file up first.
+   - Codex: append a short "Second brain" section to ~/.codex/AGENTS.md that
+     says to read the folder's CLAUDE.md and index.md at the start of every
+     session and follow them. Use the folder's full path.
+   - Any other agent: tell me which global instructions file or setting you
+     read at startup, and add the same pointer there.
+3. Show me what you changed, then run the setup interview in
    setup-interview.md.
 ```
 
 If you already cloned this repo, the short version is enough:
 
 ```text
-Run setup.sh from the second-brain repo I cloned, then run the setup interview.
+Run the setup script from the second-brain repo I cloned, then run the setup interview.
 ```
+
+### Any other agent - the one-line pointer
+
+For Cursor, Gemini CLI, Copilot, ChatGPT custom instructions or anything else, paste this into the agent's global or custom instructions, with your own path:
+
+```text
+My second brain is at /full/path/to/secondbrain/. At the start of every session, read CLAUDE.md and index.md in that folder and follow them.
+```
+
+The agent needs file access to that folder. A chat app with no file access cannot read it; attach or paste `CLAUDE.md` and `index.md` there instead.
+
+### Codex: let it save to the brain
+
+Codex can read the brain from any project. In its default sandbox it can only write inside the current workspace, so saving back needs the brain listed as a writable root in `~/.codex/config.toml`:
+
+```toml
+[sandbox_workspace_write]
+writable_roots = ["/full/path/to/secondbrain"]
+```
+
+The script does not edit `config.toml`. Without this, Codex asks for approval each time it saves to the brain.
 
 ## Fill it in
 
-Open a **new** Claude Code session in any folder and say:
+Open a **new** agent session in any folder and say:
 
 ```text
 run the setup interview
@@ -100,33 +133,41 @@ Shortcuts:
 - Drop your CV or LinkedIn PDF into `sources/` first.
 - Paste your ChatGPT or Claude memory export and say "sort this into my second brain".
 
+## Does it update itself?
+
+Partly. Be clear on what is automatic and what is not.
+
+- **Reading is automatic.** Every new session starts with the brain's `CLAUDE.md` and `index.md` loaded.
+- **Writing is instruction-driven, not guaranteed.** The brain tells the agent to save durable facts, register new project folders and file new material from `sources/`. Agents follow this most of the time, and tell you in one line when they do. Nothing forces it, and a session that ends abruptly saves nothing.
+- **To be sure, say it.** "Update my brain with what we settled" at the end of a session always works. So does "save this to my brain" at any point.
+- **Nothing runs in the background.** No process watches your folders. A file dropped into `sources/` is picked up the next time a session notices it or you mention it.
+
 ## Use it
 
 - In any project: "save this to my brain" files a fact in the right place.
-- The agent writes durable facts back on its own and tells you in one line.
 - Ask "what do you know about me?" in a fresh session to check it is loading.
 - Edit any file by hand. It is your folder.
 
 ## Keep in mind
 
 - **Every session can read the brain**, including sessions opened in client or third-party repos. Keep passwords, API keys and anything under NDA out of it.
-- **Work for several companies?** One folder each under `projects/`. For a strict client contract, keep a separate brain and do not import it globally.
+- **Work for several companies?** One folder each under `projects/`. For a strict client contract, keep a separate brain and do not load it globally.
 - **Do not commit your filled-in brain to this repo.** This repo is the empty template. Your brain lives outside it.
-- The any-session loading is Claude Code specific. Other agents can still read the folder if you open it or point them at it.
+- **Codex size limit.** Codex stops loading instruction files past 32 KiB combined. The pointer is one line, so this only matters if your own `AGENTS.md` files are already large.
 
 ## Undo
 
-1. Delete the two `@.../secondbrain/...` lines from `~/.claude/CLAUDE.md`.
-2. Remove the folder from `permissions.additionalDirectories` in `~/.claude/settings.json`.
+1. Claude Code: delete the two `@.../secondbrain/...` lines from `~/.claude/CLAUDE.md`, and remove the folder from `permissions.additionalDirectories` in `~/.claude/settings.json`.
+2. Codex: delete the "Second brain" section from `~/.codex/AGENTS.md`.
 3. Delete the brain folder if you no longer want it.
 
-## Check the script
+## Check the scripts
 
 ```bash
 ./test.sh
 ```
 
-Runs each setup script twice against a throwaway home folder and checks nothing is overwritten or duplicated. The PowerShell script is checked too when `pwsh` is installed.
+Runs each setup script against a throwaway home folder, several times, and checks nothing is overwritten or duplicated. The PowerShell script is checked too when `pwsh` is installed.
 
 ## License
 

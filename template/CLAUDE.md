@@ -1,6 +1,6 @@
 # Second Brain
 
-My second brain lives at `__BRAIN__/`: plain markdown files about me, my work and my goals. This file loads in every Claude Code session, whatever folder is open. Use it so I never have to re-brief you.
+My second brain lives at `__BRAIN__/`: plain markdown files about me, my work and my goals. This file loads at the start of every agent session, whatever folder is open. Use it so I never have to re-brief you.
 
 ## Who I am
 
@@ -24,6 +24,8 @@ My second brain lives at `__BRAIN__/`: plain markdown files about me, my work an
 - When I say "save this", put it in the right brain file or create one, then add or update its line in `__BRAIN__/index.md`.
 - When a session in any project settles something durable - a decision, a stack change, a person's role, a preference - update the matching brain file before the session ends, and tell me in one line what you saved.
 - When I build or ship something, add a dated line to `__BRAIN__/what-ive-built.md`.
+- When I start work in a project folder the brain does not know, add it to the right `projects/` file with its local path and repo.
+- When there is a new file in `sources/` that no brain file mentions, read it and file what matters.
 - Do not save session logs, task status, code, passwords, API keys or tokens. Durable facts only.
 - Keep files small and focused. Prefer updating an existing file over creating a near-duplicate.
 - If something I say contradicts a brain file, ask which is right, then fix the file.

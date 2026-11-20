@@ -1,4 +1,4 @@
-# Second brain setup for Claude Code (Windows PowerShell 5.1+ or PowerShell 7).
+# Second brain setup for Claude Code and Codex (Windows PowerShell 5.1+ or PowerShell 7).
 # Usage: powershell -ExecutionPolicy Bypass -File .\setup.ps1 [-BrainDir <folder>]
 # Default folder: <home>\secondbrain  (kept out of Documents so OneDrive does not sync it)
 # Safe to run twice: existing files are never overwritten.
@@ -51,6 +51,18 @@ foreach ($f in 'CLAUDE.md', 'index.md') {
 }
 Write-Host "imports  $Global"
 
+# 2b. Codex, if installed. AGENTS.md has no import syntax, so add a pointer instead.
+$CodexDir = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME '.codex' }
+if (Test-Path -LiteralPath $CodexDir -PathType Container) {
+    $Agents = Join-Path $CodexDir 'AGENTS.md'
+    if (-not (Test-Path -LiteralPath $Agents)) { [IO.File]::WriteAllText($Agents, '', $Utf8) }
+    $BrainFwd = $BrainDir -replace '\\', '/'
+    if (-not [IO.File]::ReadAllText($Agents).Contains("$BrainFwd/CLAUDE.md")) {
+        [IO.File]::AppendAllText($Agents, "`n## Second brain`n`nMy second brain is at $BrainFwd/. At the start of every session, read $BrainFwd/CLAUDE.md and $BrainFwd/index.md and follow them.`n", $Utf8)
+    }
+    Write-Host "codex    $Agents"
+}
+
 # 3. Let any session read and write the brain without permission prompts.
 $Settings = Join-Path $ClaudeDir 'settings.json'
 try {
@@ -81,5 +93,5 @@ try {
 
 Write-Host ""
 Write-Host "Second brain ready at $Shown"
-Write-Host "Next: open a NEW Claude Code session in any folder and say:"
+Write-Host "Next: open a NEW agent session in any folder and say:"
 Write-Host "  run the setup interview"

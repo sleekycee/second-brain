@@ -14,8 +14,15 @@ echo '{"outputStyle": "Concise", "permissions": {"allow": ["Edit"]}}' > "$HOME/.
 echo "# my rules" > "$HOME/.claude/CLAUDE.md"
 
 "$HERE/setup.sh" > /dev/null
+[ -e "$HOME/.codex" ] && fail "created ~/.codex when Codex is not installed"
+mkdir -p "$HOME/.codex"   # Codex now "installed"
+echo "# codex rules" > "$HOME/.codex/AGENTS.md"
 echo "edited by me" > "$HOME/Documents/secondbrain/what-ive-built.md"
-"$HERE/setup.sh" > /dev/null   # second run must change nothing
+"$HERE/setup.sh" > /dev/null
+"$HERE/setup.sh" > /dev/null   # repeat runs must change nothing
+
+grep -q "# codex rules" "$HOME/.codex/AGENTS.md" || fail "existing Codex AGENTS.md content lost"
+[ "$(grep -c 'secondbrain/CLAUDE.md' "$HOME/.codex/AGENTS.md")" = 1 ] || fail "Codex pointer missing or duplicated"
 
 B="$HOME/Documents/secondbrain"
 for f in CLAUDE.md index.md what-ive-built.md setup-interview.md context/.gitkeep projects/.gitkeep sources/.gitkeep; do
@@ -52,7 +59,7 @@ echo "PASS setup.sh"
 # Same checks for the Windows script, when PowerShell is installed.
 command -v pwsh > /dev/null || { echo "SKIP setup.ps1 (pwsh not installed)"; exit 0; }
 
-rm -rf "$HOME/.claude"; mkdir -p "$HOME/.claude"
+rm -rf "$HOME/.claude" "$HOME/.codex"; mkdir -p "$HOME/.claude" "$HOME/.codex"
 echo '{"outputStyle": "Concise", "permissions": {"allow": ["Edit"]}}' > "$HOME/.claude/settings.json"
 echo "# my rules" > "$HOME/.claude/CLAUDE.md"
 
@@ -70,6 +77,7 @@ grep -q '~/secondbrain/index.md' "$P/CLAUDE.md" || fail "ps1: brain path not wri
 grep -q "# my rules" "$G" || fail "ps1: existing global CLAUDE.md content lost"
 [ "$(grep -cxF '@~/secondbrain/CLAUDE.md' "$G")" = 1 ] || fail "ps1: CLAUDE.md import missing or duplicated"
 [ "$(grep -cxF '@~/secondbrain/index.md' "$G")" = 1 ] || fail "ps1: index.md import missing or duplicated"
+[ "$(grep -c 'secondbrain/CLAUDE.md' "$HOME/.codex/AGENTS.md")" = 1 ] || fail "ps1: Codex pointer missing or duplicated"
 head -c 3 "$HOME/.claude/settings.json" | grep -q $'\xef\xbb\xbf' && fail "ps1: settings.json written with a BOM"
 
 python3 - "$HOME/.claude/settings.json" "$P" <<'PY' || fail "ps1: settings.json wrong"
