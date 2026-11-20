@@ -38,10 +38,16 @@ ESCAPED="$(printf '%s' "$SHOWN" | sed 's/[&|\\]/\\&/g')"
   if [ -e "$dest" ]; then
     echo "kept     ${f#./}"
   else
-    sed "s|__BRAIN__|$ESCAPED|g" "$HERE/template/$f" > "$dest"
+    sed -e "s|__BRAIN__|$ESCAPED|g" -e "s|__TODAY__|$(date +%F)|g" "$HERE/template/$f" > "$dest"
     echo "created  ${f#./}"
   fi
 done
+
+# A brain set up before the wiki rules existed keeps its own CLAUDE.md. Say how to upgrade it.
+if ! grep -q 'wiki\.md' "$BRAIN_DIR/CLAUDE.md"; then
+  echo "note     your CLAUDE.md predates the wiki rules. To add them, tell your agent:"
+  echo "         \"Upgrade my second brain's CLAUDE.md to the wiki version from the second-brain repo.\""
+fi
 
 # 2. Load the brain in every Claude Code session.
 GLOBAL="$CLAUDE_DIR/CLAUDE.md"

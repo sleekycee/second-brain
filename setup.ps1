@@ -38,10 +38,16 @@ Get-ChildItem -LiteralPath $TemplateDir -Recurse -File -Force | ForEach-Object {
     if (Test-Path -LiteralPath $dest) {
         Write-Host "kept     $rel"
     } else {
-        $text = [IO.File]::ReadAllText($_.FullName).Replace('__BRAIN__', $Shown)
+        $text = [IO.File]::ReadAllText($_.FullName).Replace('__BRAIN__', $Shown).Replace('__TODAY__', (Get-Date -Format 'yyyy-MM-dd'))
         [IO.File]::WriteAllText($dest, $text, $Utf8)
         Write-Host "created  $rel"
     }
+}
+
+# A brain set up before the wiki rules existed keeps its own CLAUDE.md. Say how to upgrade it.
+if (-not [IO.File]::ReadAllText((Join-Path $BrainDir 'CLAUDE.md')).Contains('wiki.md')) {
+    Write-Host "note     your CLAUDE.md predates the wiki rules. To add them, tell your agent:"
+    Write-Host "         `"Upgrade my second brain's CLAUDE.md to the wiki version from the second-brain repo.`""
 }
 
 # 2. Load the brain in every Claude Code session.

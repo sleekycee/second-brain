@@ -25,10 +25,13 @@ grep -q "# codex rules" "$HOME/.codex/AGENTS.md" || fail "existing Codex AGENTS.
 [ "$(grep -c 'secondbrain/CLAUDE.md' "$HOME/.codex/AGENTS.md")" = 1 ] || fail "Codex pointer missing or duplicated"
 
 B="$HOME/Documents/secondbrain"
-for f in CLAUDE.md index.md what-ive-built.md setup-interview.md context/.gitkeep projects/.gitkeep sources/.gitkeep; do
+for f in CLAUDE.md index.md log.md wiki.md what-ive-built.md setup-interview.md context/.gitkeep projects/.gitkeep sources/.gitkeep; do
   [ -e "$B/$f" ] || fail "missing $f"
 done
 grep -rq "__BRAIN__" "$B" && fail "placeholder left in brain files"
+grep -rq "__TODAY__" "$B" && fail "date placeholder left in brain files"
+grep -q "^## \\[$(date +%F)\\] setup | brain created" "$B/log.md" || fail "log.md has no dated setup line"
+grep -q 'wiki.md' "$B/CLAUDE.md" || fail "CLAUDE.md does not point at wiki.md"
 grep -q '~/Documents/secondbrain/index.md' "$B/CLAUDE.md" || fail "brain path not written into CLAUDE.md"
 [ "$(cat "$B/what-ive-built.md")" = "edited by me" ] || fail "second run overwrote an existing file"
 
@@ -53,6 +56,15 @@ echo '{broken' > "$HOME/.claude/settings.json"
 
 # Paths with spaces are refused.
 "$HERE/setup.sh" "$HOME/my brain" > /dev/null 2>&1 && fail "path with a space was accepted"
+
+# Upgrade hint appears only when an existing CLAUDE.md predates the wiki rules.
+out="$("$HERE/setup.sh" "$HOME/fresh" 2> /dev/null)"
+case "$out" in *"predates the wiki rules"*) fail "upgrade hint shown on a fresh brain" ;; esac
+mkdir -p "$HOME/oldbrain" && echo "# old rules" > "$HOME/oldbrain/CLAUDE.md"
+out="$("$HERE/setup.sh" "$HOME/oldbrain" 2> /dev/null)"
+case "$out" in *"predates the wiki rules"*) ;; *) fail "upgrade hint missing for an old brain" ;; esac
+[ "$(cat "$HOME/oldbrain/CLAUDE.md")" = "# old rules" ] || fail "old CLAUDE.md was overwritten"
+[ -f "$HOME/oldbrain/wiki.md" ] && [ -f "$HOME/oldbrain/log.md" ] || fail "old brain did not receive wiki.md and log.md"
 
 echo "PASS setup.sh"
 
@@ -112,10 +124,12 @@ echo "edited by me" > "$HOME/secondbrain/what-ive-built.md"
 pwsh -NoProfile -File "$HERE/setup.ps1" > /dev/null
 
 P="$HOME/secondbrain"
-for f in CLAUDE.md index.md what-ive-built.md setup-interview.md context/.gitkeep projects/.gitkeep sources/.gitkeep; do
+for f in CLAUDE.md index.md log.md wiki.md what-ive-built.md setup-interview.md context/.gitkeep projects/.gitkeep sources/.gitkeep; do
   [ -e "$P/$f" ] || fail "ps1: missing $f"
 done
 grep -rq "__BRAIN__" "$P" && fail "ps1: placeholder left in brain files"
+grep -rq "__TODAY__" "$P" && fail "ps1: date placeholder left in brain files"
+grep -q "^## \\[$(date +%F)\\] setup | brain created" "$P/log.md" || fail "ps1: log.md has no dated setup line"
 grep -q '~/secondbrain/index.md' "$P/CLAUDE.md" || fail "ps1: brain path not written into CLAUDE.md"
 [ "$(cat "$P/what-ive-built.md")" = "edited by me" ] || fail "ps1: second run overwrote an existing file"
 grep -q "# my rules" "$G" || fail "ps1: existing global CLAUDE.md content lost"

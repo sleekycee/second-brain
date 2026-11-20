@@ -24,11 +24,13 @@ The interview runs in the same session. The brain starts loading automatically i
 secondbrain/                    the brain: knowledge about you, not your code
   CLAUDE.md                     who you are + rules, loaded in every session
   index.md                      map of every file, loaded in every session
+  log.md                        dated diary of changes: setup, ingests, health checks
+  wiki.md                       how the agent ingests a document and runs a health check
   what-ive-built.md             dated log of what you ship
   setup-interview.md            the interview that fills the brain in
   context/                      facts that stay true: role, people, goals, preferences
   projects/                     notes per company or area
-  sources/                      files you drop in (CV, decks); read, never edited
+  sources/                      your originals (CV, decks, exports); read, never edited
 ```
 
 The brain is one folder. Each agent is told where it is through that agent's own global instructions file:
@@ -146,15 +148,54 @@ It asks one question at a time and saves as you go. Give long answers; voice dic
 
 Shortcuts:
 
-- Drop your CV or LinkedIn PDF into `sources/` first.
+- Drop your CV or LinkedIn PDF into `sources/` first. The interview ingests what it finds there.
 - Paste your ChatGPT or Claude memory export and say "sort this into my second brain".
+
+## It runs as an LLM wiki
+
+The brain follows [Andrej Karpathy's LLM-wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). Instead of the agent piecing you together from scratch in every chat, it folds each new document into pages it keeps current, so what it knows builds up. Uploading a file to a chat is different: that reading is lost when the chat ends.
+
+Three layers:
+
+- **Raw sources** - `sources/`. Your originals. The agent reads them and never edits them.
+- **The wiki** - `context/` and `projects/`. Pages the agent writes and keeps current.
+- **The rules** - `CLAUDE.md` and `wiki.md`. How the wiki runs.
+
+Plus `index.md`, the map the agent reads first, and `log.md`, a dated diary of what changed.
+
+Three habits, each of which you can also ask for by name:
+
+| Say | What happens |
+|-----|--------------|
+| `ingest [file]` | The agent saves the original to `sources/`, gives you the 3 to 5 key points, updates every page it affects, shows you anything it contradicts, then updates the index and the log. |
+| `save that as a page` | A useful answer becomes a page instead of vanishing into chat history. |
+| `run a health check` | A tidy-up across the whole brain: duplicates, conflicts, stale facts, files the index misses. It backs up first, reports, and changes only what you approve. Worth doing about monthly. |
+
+The agent offers these on its own too, at most once per chat, and never does them without your yes.
+
+What this template adds to the pattern, learned from running it:
+
+- **Two speeds.** Small durable facts (a decision, a preference) are saved automatically with a one-line note. Ingesting documents, creating pages and health checks wait for your yes.
+- **Other people's details are flagged first.** Before ingesting a document with personal details or confidential material, the agent asks: leave it out, summarise without names, or check your organisation's AI rules. It never adds names to a people page without your yes.
+- **Contradictions are shown, not resolved.** Both versions side by side, and nothing changes until you say which is right.
+- **Sources carry their date.** Facts from an old document are marked "as of" that date.
+- **Honest reading.** If a document was too long to read in full, the agent says which parts it skimmed.
+- **Nothing is deleted.** Retired content moves to `_archive/`.
+
+### Already have a brain from an earlier version?
+
+Run the setup script again. It adds `wiki.md` and `log.md` and leaves your `CLAUDE.md` alone, then tells you if the rules need upgrading. To upgrade them, tell your agent:
+
+```text
+Upgrade my second brain's CLAUDE.md to the wiki version from https://github.com/sleekycee/second-brain. Compare mine with template/CLAUDE.md, show me what you would add or change, keep everything I wrote, and wait for my OK before writing.
+```
 
 ## Does it update itself?
 
 Partly. Be clear on what is automatic and what is not.
 
 - **Reading is automatic.** Every new session starts with the brain's `CLAUDE.md` and `index.md` loaded.
-- **Writing is instruction-driven, not guaranteed.** The brain tells the agent to save durable facts, register new project folders and file new material from `sources/`. Agents follow this most of the time, and tell you in one line when they do. Nothing forces it, and a session that ends abruptly saves nothing.
+- **Writing is instruction-driven, not guaranteed.** The brain tells the agent to save durable facts, register new project folders and offer to ingest new material in `sources/`. Agents follow this most of the time, and tell you in one line when they do. Nothing forces it, and a session that ends abruptly saves nothing.
 - **To be sure, say it.** "Update my brain with what we settled" at the end of a session always works. So does "save this to my brain" at any point.
 - **Nothing runs in the background.** No process watches your folders. A file dropped into `sources/` is picked up the next time a session notices it or you mention it.
 
