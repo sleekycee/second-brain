@@ -142,6 +142,39 @@ Partly. Be clear on what is automatic and what is not.
 - **To be sure, say it.** "Update my brain with what we settled" at the end of a session always works. So does "save this to my brain" at any point.
 - **Nothing runs in the background.** No process watches your folders. A file dropped into `sources/` is picked up the next time a session notices it or you mention it.
 
+### Optional extra: a nudge hook (Claude Code only)
+
+`extras/brain-nudge.py` makes saving more reliable. Every 6th time Claude finishes a turn in a session, it is asked: anything durable settled since the last check? It then saves to the brain and tells you in one line, or replies "Brain: nothing new."
+
+It is not installed by the setup scripts. To add it, copy the file somewhere permanent and register it under `hooks` in `~/.claude/settings.json`, keeping any hooks already there:
+
+```json
+"Stop": [
+  {
+    "hooks": [
+      {
+        "type": "command",
+        "command": "python3 /full/path/to/brain-nudge.py /full/path/to/secondbrain",
+        "timeout": 10
+      }
+    ]
+  }
+]
+```
+
+Or ask your agent:
+
+```text
+Install extras/brain-nudge.py from the second-brain repo as a Stop hook in my ~/.claude/settings.json, pointing it at my second brain folder. Keep my existing hooks.
+```
+
+What to expect:
+
+- Needs Python 3. On Windows the command is usually `python` or `py`, not `python3`.
+- Costs one extra short reply every 6 turns. Change the number with the `BRAIN_NUDGE_EVERY` environment variable or the `EVERY` line in the script.
+- A session shorter than 6 turns is never nudged. Say "update my brain" before closing those.
+- It only applies to sessions started after you add it. To remove it, delete the `Stop` block.
+
 ## Use it
 
 - In any project: "save this to my brain" files a fact in the right place.

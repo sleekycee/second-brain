@@ -56,6 +56,16 @@ echo '{broken' > "$HOME/.claude/settings.json"
 
 echo "PASS setup.sh"
 
+# Optional hook: quiet for 5 turn-ends, blocks on the 6th, never loops, survives bad input.
+hook() { printf '{"session_id":"t1","stop_hook_active":%s}' "$1" | python3 "$HERE/extras/brain-nudge.py" /my/brain; }
+for i in 1 2 3 4 5; do [ -z "$(hook false)" ] || fail "hook fired early on turn $i"; done
+hook false | grep -q '"decision": "block"' || fail "hook did not block on turn 6"
+[ -z "$(hook false)" ] || fail "hook fired again on turn 7"
+printf '{"session_id":"t2","stop_hook_active":false}' | BRAIN_NUDGE_EVERY=1 python3 "$HERE/extras/brain-nudge.py" /my/brain | grep -q '/my/brain/index.md' || fail "hook ignores the brain path argument"
+[ -z "$(printf '{"session_id":"t3","stop_hook_active":true}' | BRAIN_NUDGE_EVERY=1 python3 "$HERE/extras/brain-nudge.py")" ] || fail "hook loops when already active"
+echo 'not json' | python3 "$HERE/extras/brain-nudge.py" || fail "hook exits non-zero on bad input"
+echo "PASS brain-nudge.py"
+
 # Same checks for the Windows script, when PowerShell is installed.
 command -v pwsh > /dev/null || { echo "SKIP setup.ps1 (pwsh not installed)"; exit 0; }
 
