@@ -2,6 +2,22 @@
 
 A folder of plain markdown files about you and your work that loads behind every agent session, whatever project folder you open. Works with Claude Code, Codex, and any agent that can read files. You stop re-briefing the agent, and your projects stay in their own folders.
 
+## Quick start - one prompt
+
+Paste this into Claude Code or Codex, in any folder. It sets the brain up and interviews you in the same session:
+
+```text
+Set up my second brain from https://github.com/sleekycee/second-brain and fill it in.
+
+1. Clone the repo to a temporary folder and run its setup script for my operating system (setup.sh on macOS or Linux, setup.ps1 on Windows). If you cannot run scripts, follow the manual steps in the repo's README instead.
+2. Show me what it created and changed.
+3. Then interview me straight away, following setup-interview.md in my new brain folder: one question at a time, saving as we go, until the brain is filled in or I say stop.
+```
+
+Add "with the nudge hook" to the first line if you want the optional hook described further down.
+
+The interview runs in the same session. The brain starts loading automatically in every session you open after that.
+
 ## How it works
 
 ```
@@ -63,9 +79,9 @@ Both scripts never overwrite an existing file, back up `settings.json` to `setti
 
 Installed Codex after running the script? Run it again; it adds the Codex pointer and changes nothing else.
 
-### Option B - give your agent this prompt
+### Option B - give your agent the manual steps
 
-Works in any agent that can edit files, on any OS. On Windows, replace `~/Documents/secondbrain` with `~/secondbrain`. Paste it as is:
+The quick-start prompt at the top is the short way. Use this longer one when the agent cannot clone the repo or run scripts. Works in any agent that can edit files, on any OS. On Windows, replace `~/Documents/secondbrain` with `~/secondbrain`. Paste it as is:
 
 ```text
 Set up a second brain for me, following https://github.com/sleekycee/second-brain.
